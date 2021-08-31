@@ -20,8 +20,16 @@ use crate::runtime::Object;
 use objc_sys::{objc_exception_throw, objc_object};
 
 extern "C" {
+    #[cfg(not(feature = "unstable_c_unwind"))]
     fn rust_objc_try_catch_exception(
         f: extern "C" fn(*mut c_void),
+        context: *mut c_void,
+        error: *mut *mut objc_object,
+    ) -> c_uchar;
+
+    #[cfg(feature = "unstable_c_unwind")]
+    fn rust_objc_try_catch_exception(
+        f: extern "C-unwind" fn(*mut c_void),
         context: *mut c_void,
         error: *mut *mut objc_object,
     ) -> c_uchar;
@@ -52,14 +60,38 @@ pub unsafe fn throw(exception: Option<&Id<Object, Shared>>) -> ! {
 }
 
 unsafe fn try_no_ret<F: FnOnce()>(closure: F) -> Result<(), Option<Id<Object, Shared>>> {
-    extern "C" fn try_objc_execute_closure<F: FnOnce()>(closure: &mut Option<F>) {
-        // This is always passed Some, so it's safe to unwrap
-        let closure = closure.take().unwrap();
-        closure();
-    }
+    #[cfg(not(feature = "unstable_c_unwind"))]
+    let f = {
+        extern "C" fn try_objc_execute_closure<F>(closure: &mut Option<F>)
+        where
+            F: FnOnce(),
+        {
+            // This is always passed Some, so it's safe to unwrap
+            let closure = closure.take().unwrap();
+            closure();
+        }
 
-    let f: extern "C" fn(&mut Option<F>) = try_objc_execute_closure;
-    let f: extern "C" fn(*mut c_void) = unsafe { mem::transmute(f) };
+        let f: extern "C" fn(&mut Option<F>) = try_objc_execute_closure;
+        let f: extern "C" fn(*mut c_void) = unsafe { mem::transmute(f) };
+        f
+    };
+
+    #[cfg(feature = "unstable_c_unwind")]
+    let f = {
+        extern "C-unwind" fn try_objc_execute_closure<F>(closure: &mut Option<F>)
+        where
+            F: FnOnce(),
+        {
+            // This is always passed Some, so it's safe to unwrap
+            let closure = closure.take().unwrap();
+            closure();
+        }
+
+        let f: extern "C-unwind" fn(&mut Option<F>) = try_objc_execute_closure;
+        let f: extern "C-unwind" fn(*mut c_void) = unsafe { mem::transmute(f) };
+        f
+    };
+
     // Wrap the closure in an Option so it can be taken
     let mut closure = Some(closure);
     let context = &mut closure as *mut _ as *mut c_void;

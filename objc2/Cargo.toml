@@ -30,7 +30,11 @@ exception = ["cc"]
 # Wrap every `objc2::msg_send` call in a `@try/@catch` block
 catch_all = ["exception"]
 verify_message = []
+
 unstable_autoreleasesafe = []
+
+# Uses the c_unwind feature to make throwing safe. Nightly only
+unstable_c_unwind = []
 
 [dependencies]
 malloc_buf = "1.0"
