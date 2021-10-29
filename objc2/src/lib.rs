@@ -68,6 +68,7 @@ The bindings can be used on Linux or *BSD utilizing the
 #![deny(non_ascii_idents)]
 #![warn(unreachable_pub)]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![feature(fundamental)]
 // Update in Cargo.toml as well.
 #![doc(html_root_url = "https://docs.rs/objc2/0.2.7")]
 

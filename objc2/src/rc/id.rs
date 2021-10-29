@@ -92,6 +92,7 @@ use crate::Message;
 /// let cloned: Id<T, Shared> = shared.clone();
 /// // Do something with `&T` here
 /// ```
+#[fundamental]
 #[repr(transparent)]
 // TODO: Figure out if `Message` bound on `T` would be better here?
 // TODO: Add `?Sized + ptr::Thin` bound on `T` to allow for extern types
