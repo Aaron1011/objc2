@@ -211,6 +211,52 @@ impl<T: INSObject, O: Ownership> Index<usize> for NSArray<T, O> {
     }
 }
 
+impl<T, O> From<Id<NSArray<T, O>, Owned>> for Vec<Id<T, O>>
+where
+    T: INSObject,
+    O: Ownership,
+{
+    fn from(array: Id<NSArray<T, O>, Owned>) -> Self {
+        let vec: Vec<&T> = (&*array).into();
+        vec.into_iter()
+            .map(|obj| unsafe { Id::retain(obj.into()) })
+            .collect()
+    }
+}
+
+impl<T, O> From<Vec<Id<T, O>>> for Id<NSArray<T, O>, Owned>
+where
+    T: INSObject,
+    O: Ownership,
+{
+    fn from(vec: Vec<Id<T, O>>) -> Self {
+        unsafe { from_refs(vec.as_slice_ref()) }
+    }
+}
+
+impl<'a, T, O> From<&'a NSArray<T, O>> for Vec<&'a T>
+where
+    T: INSObject,
+    O: Ownership,
+{
+    fn from(array: &'a NSArray<T, O>) -> Self {
+        array.objects_in_range(0..array.count())
+    }
+}
+
+impl<T> From<&'_ NSArray<T, Shared>> for Vec<Id<T, Shared>>
+where
+    T: INSObject,
+{
+    fn from(array: &NSArray<T, Shared>) -> Self {
+        array
+            .objects_in_range(0..array.count())
+            .into_iter()
+            .map(|obj| unsafe { Id::retain(obj.into()) })
+            .collect()
+    }
+}
+
 pub unsafe trait INSMutableArray: INSArray {
     #[doc(alias = "addObject:")]
     fn push(&mut self, obj: Id<Self::Item, Self::ItemOwnership>) {
@@ -358,6 +404,16 @@ impl<T: INSObject, O: Ownership> Index<usize> for NSMutableArray<T, O> {
     }
 }
 
+impl<T, O> From<Vec<Id<T, O>>> for Id<NSMutableArray<T, O>, Owned>
+where
+    T: INSObject,
+    O: Ownership,
+{
+    fn from(vec: Vec<Id<T, O>>) -> Self {
+        unsafe { from_refs(vec.as_slice_ref()) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use alloc::vec;
@@ -374,7 +430,7 @@ mod tests {
         for _ in 0..len {
             vec.push(NSObject::new());
         }
-        NSArray::from_vec(vec)
+        vec.into()
     }
 
     fn retain_count<T: INSObject>(obj: &T) -> usize {
@@ -455,7 +511,7 @@ mod tests {
     fn test_into_vec() {
         let array = sample_array(4);
 
-        let vec = INSArray::into_vec(array);
+        let vec = Vec::from(array);
         assert_eq!(vec.len(), 4);
     }
 
@@ -504,7 +560,7 @@ mod tests {
     #[test]
     fn test_sort() {
         let strings = vec![NSString::from_str("hello"), NSString::from_str("hi")];
-        let mut strings = NSMutableArray::from_vec(strings);
+        let mut strings: Id<NSMutableArray<_, _>, Owned> = strings.into();
 
         autoreleasepool(|pool| {
             strings.sort_by(|s1, s2| s1.as_str(pool).len().cmp(&s2.as_str(pool).len()));
