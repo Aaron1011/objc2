@@ -21,6 +21,9 @@ extern crate alloc;
 mod encode;
 mod encoding;
 mod parse;
+#[allow(dead_code)]
+mod static_encoding_str;
+mod static_int_str;
 
 pub use self::encode::{Encode, EncodeArguments, RefEncode};
 pub use self::encoding::Encoding;
