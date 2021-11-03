@@ -23,7 +23,11 @@ default = ["block"]
 # Provided as a way to cut down on dependencies
 block = ["block2"]
 
+# Requires the `generic_const_exprs` feature
+unstable_static_encoding_str = ["objc2-encode/unstable_static_encoding_str", "objc2/unstable_static_encoding_str"]
+
 [dependencies]
 block2 = { path = "../block2", optional = true }
 objc2 = { path = "../objc2" }
 objc-sys = { path = "../objc-sys" }
+objc2-encode = { path = "../objc2-encode", optional = true }

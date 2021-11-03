@@ -243,17 +243,17 @@ impl ClassDecl {
     /// If the ivar wasn't successfully added.
     pub fn add_ivar<T: Encode>(&mut self, name: &str) {
         let c_name = CString::new(name).unwrap();
+        #[cfg(not(feature = "unstable_static_encoding_str"))]
         let encoding = CString::new(T::ENCODING.to_string()).unwrap();
+        #[cfg(not(feature = "unstable_static_encoding_str"))]
+        let encoding_ptr = encoding.as_ptr();
+        #[cfg(feature = "unstable_static_encoding_str")]
+        let encoding_ptr = <objc2_encode::EncodingHelper<T::ENCODING>>::ENCODING_CSTR
+            .cast::<std::os::raw::c_char>();
         let size = mem::size_of::<T>();
         let align = log2_align_of::<T>();
         let success = Bool::from_raw(unsafe {
-            runtime::class_addIvar(
-                self.cls as _,
-                c_name.as_ptr(),
-                size,
-                align,
-                encoding.as_ptr(),
-            )
+            runtime::class_addIvar(self.cls as _, c_name.as_ptr(), size, align, encoding_ptr)
         });
         assert!(success.is_true(), "Failed to add ivar {}", name);
     }

@@ -32,6 +32,9 @@ catch_all = ["exception"]
 verify_message = []
 unstable_autoreleasesafe = []
 
+# Requires the `generic_const_exprs` feature
+unstable_static_encoding_str = ["objc2-encode/unstable_static_encoding_str"]
+
 [dependencies]
 malloc_buf = "1.0"
 objc-sys = { path = "../objc-sys" }

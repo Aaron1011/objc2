@@ -57,14 +57,16 @@ pub unsafe trait INSValue: INSObject {
     fn new(value: Self::Value) -> Id<Self, Self::Ownership> {
         let cls = Self::class();
         let bytes = &value as *const Self::Value as *const c_void;
+        #[cfg(not(feature = "unstable_static_encoding_str"))]
         let encoding = CString::new(Self::Value::ENCODING.to_string()).unwrap();
+        #[cfg(not(feature = "unstable_static_encoding_str"))]
+        let encoding_ptr = encoding.as_ptr();
+        #[cfg(feature = "unstable_static_encoding_str")]
+        let encoding_ptr =
+            <objc2_encode::EncodingHelper<Self::Value::ENCODING>>::ENCODING_CSTR.cast::<c_char>();
         unsafe {
             let obj: *mut Self = msg_send![cls, alloc];
-            let obj: *mut Self = msg_send![
-                obj,
-                initWithBytes: bytes,
-                objCType: encoding.as_ptr(),
-            ];
+            let obj: *mut Self = msg_send![obj, initWithBytes: bytes, objCType: encoding_ptr];
             Id::new(NonNull::new_unchecked(obj))
         }
     }
