@@ -1,8 +1,11 @@
 use super::static_int_str;
+#[cfg(feature = "unstable_static_encoding_str")]
+use super::Encode;
 use super::Encoding;
 
 impl<'a> Encoding<'a> {
-    const fn end_str_len(self) -> usize {
+    #[doc(hidden)]
+    pub const fn end_str_len(self) -> usize {
         use Encoding::*;
 
         match self {
@@ -26,7 +29,8 @@ impl<'a> Encoding<'a> {
         }
     }
 
-    const fn get_str_array<const LEN: usize>(self) -> [u8; LEN] {
+    #[doc(hidden)]
+    pub const fn get_str_array<const LEN: usize>(self) -> [u8; LEN] {
         use Encoding::*;
 
         let mut res: [u8; LEN] = [0; LEN];
@@ -156,14 +160,45 @@ impl<'a> Encoding<'a> {
         res
     }
 
-    const fn end_cstr_len(self) -> usize {
+    #[doc(hidden)]
+    pub const fn end_cstr_len(self) -> usize {
         self.end_str_len() + 1
     }
 
-    const fn get_cstr_array<const RES: usize>(self) -> [u8; RES] {
+    #[doc(hidden)]
+    pub const fn get_cstr_array<const RES: usize>(self) -> [u8; RES] {
         // Contains nul byte at the end
         self.get_str_array()
     }
+}
+
+/// Workaround since we can't specify the correct `where` bound on `Encode`.
+#[cfg(feature = "unstable_static_encoding_str")]
+pub struct EncodingHelper<T>(T);
+
+#[cfg(feature = "unstable_static_encoding_str")]
+impl<T: super::Encode> EncodingHelper<T>
+where
+    [u8; T::ENCODING.end_cstr_len()]: Sized,
+{
+    #[doc(hidden)]
+    const __ENCODING_CSTR_BYTES: [u8; T::ENCODING.end_cstr_len()] = T::ENCODING.get_cstr_array();
+
+    /// TODO
+    pub const ENCODING_CSTR: *const u8 = Self::__ENCODING_CSTR_BYTES.as_ptr();
+}
+
+#[cfg(feature = "unstable_static_encoding_str")]
+impl<T: Encode> EncodingHelper<T>
+where
+    [u8; T::ENCODING.end_str_len()]: Sized,
+{
+    #[doc(hidden)]
+    const __ENCODING_STR_BYTES: [u8; T::ENCODING.end_str_len()] = T::ENCODING.get_str_array();
+
+    /// TODO
+    pub const ENCODING_STR: &'static str =
+        unsafe { core::mem::transmute::<&[u8], &str>(&Self::__ENCODING_STR_BYTES) };
 }
 
 #[cfg(test)]
