@@ -31,7 +31,7 @@ pub use objc_sys::{
 pub use objc_sys::{BOOL, NO, YES};
 
 pub use super::bool::Bool;
-use crate::Encode;
+use crate::{Encode, Message};
 
 /// A type that represents a method selector.
 #[repr(transparent)]
@@ -404,14 +404,22 @@ fn get_ivar_offset<T: Encode>(cls: &Class, name: &str) -> isize {
     }
 }
 
-impl Object {
-    pub(crate) fn as_ptr(&self) -> *const objc_sys::objc_object {
-        self as *const Self as *const _
-    }
-
-    /// Returns the class of this object.
-    pub fn class(&self) -> &Class {
-        unsafe { &*(object_getClass(self.as_ptr()) as *const Class) }
+/// TODO
+///
+/// # Safety
+///
+/// A pointer to the type must be an Objective-C object; other things that can
+/// be sent messages (like classes and blocks) should _not_ implement this.
+///
+/// Additionally, the type must implement [`Message`] and [`RefEncode`] and
+/// adhere to the safety requirements therein.
+pub unsafe trait ObjectType: Message {
+    /// Dynamically find the class of this object.
+    ///
+    /// Can be overridden if the class for this specific object is constant
+    /// and can be cached or found statically.
+    fn class(&self) -> &Class {
+        unsafe { &*(object_getClass(self as *const Self as *const _) as *const Class) }
     }
 
     /// Returns a shared reference to the ivar with the given name.
@@ -424,7 +432,9 @@ impl Object {
     /// # Safety
     ///
     /// The caller must ensure that the ivar is actually of type `T`.
-    pub unsafe fn get_ivar<T: Encode>(&self, name: &str) -> &T {
+    ///
+    /// Library implementors should expose a safe interface to the ivar.
+    unsafe fn get_ivar<T: Encode>(&self, name: &str) -> &T {
         let offset = get_ivar_offset::<T>(self.class(), name);
         // `offset` is given in bytes, so we convert to `u8`
         let ptr = self as *const Self as *const u8;
@@ -442,7 +452,9 @@ impl Object {
     /// # Safety
     ///
     /// The caller must ensure that the ivar is actually of type `T`.
-    pub unsafe fn get_mut_ivar<T: Encode>(&mut self, name: &str) -> &mut T {
+    ///
+    /// Library implementors should expose a safe interface to the ivar.
+    unsafe fn get_mut_ivar<T: Encode>(&mut self, name: &str) -> &mut T {
         let offset = get_ivar_offset::<T>(self.class(), name);
         // `offset` is given in bytes, so we convert to `u8`
         let ptr = self as *mut Self as *mut u8;
@@ -460,21 +472,25 @@ impl Object {
     /// # Safety
     ///
     /// The caller must ensure that the ivar is actually of type `T`.
-    pub unsafe fn set_ivar<T: Encode>(&mut self, name: &str, value: T) {
+    ///
+    /// Library implementors should expose a safe interface to the ivar.
+    unsafe fn set_ivar<T: Encode>(&mut self, name: &str, value: T) {
         // SAFETY: Invariants upheld by caller
         unsafe { *self.get_mut_ivar::<T>(name) = value };
     }
 }
 
+unsafe impl ObjectType for Object {}
+
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<{:?}: {:p}>", self.class(), self.as_ptr())
+        write!(f, "<{:?}: {:p}>", self.class(), self as *const Self)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Class, Protocol, Sel};
+    use super::{Class, ObjectType, Protocol, Sel};
     use crate::test_utils;
     use crate::Encode;
 

@@ -3,7 +3,7 @@ use std::sync::Once;
 
 use objc2::declare::ClassDecl;
 use objc2::rc::{Id, Owned};
-use objc2::runtime::{Class, Object, Sel};
+use objc2::runtime::{Class, Object, ObjectType, Sel};
 use objc2::{msg_send, sel};
 use objc2::{Encoding, Message, RefEncode};
 use objc2_foundation::{INSObject, NSObject};
@@ -21,6 +21,8 @@ pub struct MYObject {
 unsafe impl RefEncode for MYObject {
     const ENCODING_REF: Encoding<'static> = Encoding::Object;
 }
+unsafe impl Message for MYObject {}
+unsafe impl ObjectType for MYObject {}
 
 impl MYObject {
     fn new() -> Id<Self, <Self as INSObject>::Ownership> {
@@ -29,21 +31,13 @@ impl MYObject {
     }
 
     fn number(&self) -> u32 {
-        unsafe {
-            let obj = &*(self as *const _ as *const Object);
-            *obj.get_ivar("_number")
-        }
+        unsafe { *self.get_ivar("_number") }
     }
 
     fn set_number(&mut self, number: u32) {
-        unsafe {
-            let obj = &mut *(self as *mut _ as *mut Object);
-            obj.set_ivar("_number", number);
-        }
+        unsafe { self.set_ivar("_number", number) }
     }
 }
-
-unsafe impl Message for MYObject {}
 
 static MYOBJECT_REGISTER_CLASS: Once = Once::new();
 
@@ -58,9 +52,7 @@ unsafe impl INSObject for MYObject {
 
             // Add ObjC methods for getting and setting the number
             extern "C" fn my_object_set_number(this: &mut Object, _cmd: Sel, number: u32) {
-                unsafe {
-                    this.set_ivar("_number", number);
-                }
+                unsafe { this.set_ivar("_number", number) }
             }
 
             extern "C" fn my_object_get_number(this: &Object, _cmd: Sel) -> u32 {
@@ -85,13 +77,9 @@ fn main() {
     let mut obj = MYObject::new();
 
     obj.set_number(7);
-    println!("Number: {}", unsafe {
-        let number: u32 = msg_send![obj, number];
-        number
-    });
+    let number: u32 = unsafe { msg_send![obj, number] };
+    println!("Number: {}", number);
 
-    unsafe {
-        let _: () = msg_send![obj, setNumber: 12u32];
-    }
+    let _: () = unsafe { msg_send![obj, setNumber: 12u32] };
     println!("Number: {}", obj.number());
 }

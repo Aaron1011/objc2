@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 use std::sync::Once;
 
 use crate::declare::{ClassDecl, ProtocolDecl};
-use crate::runtime::{self, Class, Object, Protocol, Sel};
+use crate::runtime::{self, Class, Object, ObjectType, Protocol, Sel};
 use crate::{Encode, Encoding, MessageReceiver};
 
 pub(crate) struct CustomObject {

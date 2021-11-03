@@ -70,7 +70,7 @@ one ivar, a `u32` named `_number` and a `number` method that returns it:
 ```rust , no_run
 use objc2::{class, sel};
 use objc2::declare::ClassDecl;
-use objc2::runtime::{Object, Sel};
+use objc2::runtime::{Object, ObjectType, Sel};
 
 let superclass = class!(NSObject);
 let mut decl = ClassDecl::new("MyNumber", superclass).unwrap();

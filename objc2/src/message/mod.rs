@@ -5,7 +5,7 @@ use core::ptr::NonNull;
 use std::error::Error;
 
 use crate::rc::{Id, Ownership};
-use crate::runtime::{Class, Imp, Object, Sel};
+use crate::runtime::{Class, Imp, Object, ObjectType, Sel};
 use crate::{Encode, EncodeArguments, RefEncode};
 
 #[cfg(feature = "catch_all")]
