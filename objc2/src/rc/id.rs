@@ -218,6 +218,23 @@ impl<T: Message, O: Ownership> Id<T, O> {
         unsafe { Self::new(res) }
     }
 
+    /// TODO
+    #[doc(alias = "objc_retainAutoreleasedReturnValue")]
+    #[cfg_attr(not(debug_assertions), inline)]
+    pub unsafe fn retain_autoreleased(ptr: NonNull<T>) -> Id<T, O> {
+        // SAFETY: Same as `retain`, `objc_retainAutoreleasedReturnValue` is
+        // just an optimization.
+
+        let ptr = ptr.as_ptr() as *mut objc_sys::objc_object;
+        let res = unsafe { objc_sys::objc_retainAutoreleasedReturnValue(ptr) };
+        debug_assert_eq!(
+            res, ptr,
+            "objc_retainAutoreleasedReturnValue did not return the same pointer"
+        );
+        let res = unsafe { NonNull::new_unchecked(res as *mut T) };
+        unsafe { Self::new(res) }
+    }
+
     #[cfg_attr(not(debug_assertions), inline)]
     fn autorelease_inner(self) -> *mut T {
         // Note that this (and the actual `autorelease`) is not an associated
@@ -236,7 +253,6 @@ impl<T: Message, O: Ownership> Id<T, O> {
         res as *mut T
     }
 
-    // TODO: objc_retainAutoreleasedReturnValue
     // TODO: objc_autoreleaseReturnValue
     // TODO: objc_retainAutorelease
     // TODO: objc_retainAutoreleaseReturnValue
