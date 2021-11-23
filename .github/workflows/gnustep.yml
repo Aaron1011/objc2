@@ -120,4 +120,4 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
-        args: --package objc2-foundation --test objc_id_retain_autoreleased --release
+        args: --package objc2-foundation --no-default-features --features objc-sys/gnustep-1-9 --test objc_id_retain_autoreleased --release
