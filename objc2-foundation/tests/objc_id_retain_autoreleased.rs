@@ -34,18 +34,22 @@ fn test_retain_autoreleased() {
         let data = create_data(b"12");
         // The autorelease-return-mechanism has to "warm up" somehow? At least
         // for some reason the first time this is used it fails.
-        assert_eq!(retain_count(&data), 2);
+        assert_eq!(retain_count(&data), if cfg!(gnustep) { 1 } else { 2 });
 
         // When compiled in release mode / with optimizations enabled,
         // subsequent usage of `retain_autoreleased` will succeed in retaining
         // the autoreleased value!
-        let expected_retain_count = if cfg!(debug_assertions) { 2 } else { 1 };
+        let expected = if cfg!(all(debug_assertions, not(gnustep))) {
+            2
+        } else {
+            1
+        };
 
         let data = create_data(b"34");
-        assert_eq!(retain_count(&data), expected_retain_count);
+        assert_eq!(retain_count(&data), expected);
 
         let data = create_data(b"56");
-        assert_eq!(retain_count(&data), expected_retain_count);
+        assert_eq!(retain_count(&data), expected);
 
         // Here we manually clean up the autorelease, so it will always be 1.
         let data = autoreleasepool(|_| create_data(b"78"));
