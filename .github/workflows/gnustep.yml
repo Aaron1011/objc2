@@ -115,3 +115,9 @@ jobs:
         command: test
         # Not using --all-features because some features are nightly-only
         args: --verbose --no-fail-fast --features gnustep-1-9,block,exception,catch_all,verify_message
+
+    - name: Test objc_retainAutoreleasedReturnValue
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --package objc2-foundation --test objc_id_retain_autoreleased --release

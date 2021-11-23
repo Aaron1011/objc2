@@ -25,6 +25,11 @@ fn create_data(bytes: &[u8]) -> Id<NSData, Shared> {
 
 #[test]
 fn test_retain_autoreleased() {
+    #[cfg(gnustep)]
+    unsafe {
+        objc2::__gnustep_hack::get_class_to_force_linkage()
+    };
+
     autoreleasepool(|_| {
         let data = create_data(b"12");
         // The autorelease-return-mechanism has to "warm up" somehow? At least
