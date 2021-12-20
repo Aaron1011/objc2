@@ -1,0 +1,13 @@
+[package]
+name = "objc2-foundation-sys"
+version = "0.0.1" # Remember to update html_root_url in lib.rs
+authors = ["Mads Marquart <mads@marquart.dk>"]
+edition = "2021"
+
+# TODO: More metadata
+
+[dependencies]
+objc2 = { path = "../objc2" }
+
+[package.metadata.docs.rs]
+default-target = "x86_64-apple-darwin"

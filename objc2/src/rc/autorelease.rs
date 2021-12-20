@@ -4,7 +4,21 @@ use core::marker::PhantomData;
 #[cfg(all(debug_assertions, not(feature = "unstable_autoreleasesafe")))]
 use std::{cell::RefCell, thread_local, vec::Vec};
 
+use super::MaybeOwnership;
 use crate::ffi;
+use crate::{Encode, Encoding};
+
+#[repr(transparent)]
+pub struct Autoreleased<'a, T, O: MaybeOwnership> {
+    inner: &'a T,
+    o: PhantomData<(T, O)>,
+}
+
+impl<'a, T, O: MaybeOwnership> Autoreleased<'a, T, O> {
+    pub unsafe fn new(ptr: *const T) -> Option<Autoreleased<'a, T, O>> {
+        unimplemented!()
+    }
+}
 
 /// An Objective-C autorelease pool.
 ///
