@@ -178,6 +178,15 @@ impl<T: Message + ?Sized, O: MaybeOwnership> Id<T, O> {
     pub(crate) fn as_ptr(&self) -> *mut T {
         self.ptr.as_ptr()
     }
+
+    /// Constructs an [`Id`] from a pointer that may be null.
+    ///
+    /// Same as [`new`], apart from a check for whether the pointer is null.
+    #[inline]
+    pub unsafe fn new_null(ptr: *mut T) -> Option<Id<T, O>> {
+        // SAFETY: Upheld by the caller
+        NonNull::new(ptr).map(|ptr| unsafe { Id::new(ptr) })
+    }
 }
 
 // TODO: Add ?Sized bound
