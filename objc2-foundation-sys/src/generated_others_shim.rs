@@ -3,14 +3,17 @@
 use core::mem::ManuallyDrop;
 use core::ptr::NonNull;
 
-use std::os::raw::{c_char, c_int, c_longlong, c_schar, c_ulong, c_ushort, c_void};
-
 use objc2::ffi::{NSInteger, NSUInteger};
 use objc2::rc::{Id, Unknown};
-use objc2::runtime::{Bool, Object};
+use objc2::runtime::Object;
 use objc2::{class, msg_send, Encoding, Message, RefEncode};
 
-use crate::{Autoreleased, NSCoder, NSObject, NSRange, NSString};
+use crate::{Autoreleased, NSCoder, NSObject, NSRange};
+
+pub const NSComparisonResult_NSOrderedAscending: NSComparisonResult = -1;
+pub const NSComparisonResult_NSOrderedSame: NSComparisonResult = 0;
+pub const NSComparisonResult_NSOrderedDescending: NSComparisonResult = 1;
+pub type NSComparisonResult = NSInteger;
 
 #[repr(transparent)]
 pub struct NSArray(NSObject);

@@ -2,12 +2,14 @@ use core::cmp::Ordering;
 
 use objc2::{Encode, Encoding, RefEncode};
 
+use crate::ffi;
+
 #[repr(isize)] // NSInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSComparisonResult {
-    Ascending = -1,
-    Same = 0,
-    Descending = 1,
+    Ascending = ffi::NSComparisonResult_NSOrderedAscending,
+    Same = ffi::NSComparisonResult_NSOrderedSame,
+    Descending = ffi::NSComparisonResult_NSOrderedDescending,
 }
 
 impl Default for NSComparisonResult {
