@@ -3,6 +3,8 @@
 use core::mem::ManuallyDrop;
 use core::ptr::NonNull;
 
+use std::os::raw::c_void;
+
 use objc2::ffi::{NSInteger, NSUInteger};
 use objc2::rc::{Id, Unknown};
 use objc2::runtime::Object;
@@ -55,8 +57,12 @@ impl NSArray {
         let this = ManuallyDrop::new(this);
         Id::new(msg_send![this, initWithObjects: objects, count: cnt])
     }
-    pub unsafe fn initWithCoder_(&self, coder: NonNull<NSCoder>) -> Option<Id<Self, Unknown>> {
-        Id::new_null(msg_send![self, initWithCoder: coder])
+    pub unsafe fn initWithCoder_(
+        this: Id<Self, Unknown>,
+        coder: NonNull<NSCoder>,
+    ) -> Option<Id<Self, Unknown>> {
+        let this = ManuallyDrop::new(this);
+        Id::new_null(msg_send![this, initWithCoder: coder])
     }
     pub unsafe fn count(&self) -> NSUInteger {
         msg_send![self, count]
@@ -69,5 +75,62 @@ impl NSArray {
     }
     pub unsafe fn getObjects_range_(&self, objects: NonNull<NonNull<Object>>, range: NSRange) {
         msg_send![self, getObjects: objects, range: range]
+    }
+}
+
+#[repr(transparent)]
+pub struct NSData(NSObject);
+impl core::ops::Deref for NSData {
+    type Target = NSObject;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl core::ops::DerefMut for NSData {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+unsafe impl Message for NSData {}
+unsafe impl RefEncode for NSData {
+    const ENCODING_REF: Encoding<'static> = Encoding::Object;
+}
+impl NSData {
+    pub unsafe fn alloc() -> Option<Id<Self, Unknown>> {
+        Id::new_null(msg_send![class!(NSData), alloc])
+    }
+}
+impl NSData {
+    pub unsafe fn length(&self) -> NSUInteger {
+        msg_send![self, length]
+    }
+    pub unsafe fn bytes(&self) -> *const c_void {
+        msg_send![self, bytes]
+    }
+}
+impl NSData {
+    pub unsafe fn initWithBytes_length_(
+        this: Id<Self, Unknown>,
+        bytes: *const c_void,
+        length: NSUInteger,
+    ) -> Id<Self, Unknown> {
+        let this = ManuallyDrop::new(this);
+        Id::new(msg_send![this, initWithBytes: bytes, length: length])
+    }
+    pub unsafe fn initWithBytesNoCopy_length_deallocator_(
+        this: Id<Self, Unknown>,
+        bytes: *mut c_void,
+        length: NSUInteger,
+        deallocator: *mut c_void,
+    ) -> Id<Self, Unknown> {
+        let this = ManuallyDrop::new(this);
+        Id::new(msg_send![
+            this,
+            initWithBytesNoCopy: bytes,
+            length: length,
+            deallocator: deallocator,
+        ])
     }
 }

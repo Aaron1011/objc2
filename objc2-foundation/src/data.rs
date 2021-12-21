@@ -4,7 +4,7 @@ use core::ops::{Deref, DerefMut, Range};
 use core::slice;
 use core::{ffi::c_void, ptr::NonNull};
 
-use super::{INSCopying, INSMutableCopying, INSObject, NSRange};
+use super::{ffi, INSCopying, INSMutableCopying, INSObject, NSRange};
 use objc2::msg_send;
 use objc2::rc::{Id, Owned, Ownership, Shared};
 
@@ -13,8 +13,12 @@ pub unsafe trait INSData: INSObject {
 
     unsafe_def_fn!(fn new -> Self::Ownership);
 
+    fn r(&self) -> &ffi::NSData {
+        unsafe { &*(self as *const Self as *const ffi::NSData) }
+    }
+
     fn len(&self) -> usize {
-        unsafe { msg_send![self, length] }
+        unsafe { self.r().length() }
     }
 
     fn is_empty(&self) -> bool {
@@ -22,26 +26,21 @@ pub unsafe trait INSData: INSObject {
     }
 
     fn bytes(&self) -> &[u8] {
-        let ptr: *const c_void = unsafe { msg_send![self, bytes] };
+        let ptr = unsafe { self.r().bytes() } as *const u8;
         // The bytes pointer may be null for length zero
         if ptr.is_null() {
             &[]
         } else {
-            unsafe { slice::from_raw_parts(ptr as *const u8, self.len()) }
+            unsafe { slice::from_raw_parts(ptr, self.len()) }
         }
     }
 
     fn with_bytes(bytes: &[u8]) -> Id<Self, Self::Ownership> {
-        let cls = Self::class();
         let bytes_ptr = bytes.as_ptr() as *const c_void;
         unsafe {
-            let obj: *mut Self = msg_send![cls, alloc];
-            let obj: *mut Self = msg_send![
-                obj,
-                initWithBytes: bytes_ptr,
-                length: bytes.len(),
-            ];
-            Id::new(NonNull::new_unchecked(obj))
+            let obj = ffi::NSData::alloc().unwrap();
+            let obj = ffi::NSData::initWithBytes_length_(obj, bytes_ptr, bytes.len());
+            obj.cast().into_ownership()
         }
     }
 
@@ -66,28 +65,28 @@ pub unsafe trait INSData: INSObject {
         // See https://github.com/gnustep/libs-base/pull/213
         // So we just use NSDataWithDeallocatorBlock directly.
         #[cfg(gnustep)]
-        let cls = {
+        let obj = {
             let cls = Self::class();
-            if cls == objc2::class!(NSData) {
+            let cls = if cls == objc2::class!(NSData) {
                 objc2::class!(NSDataWithDeallocatorBlock)
             } else {
                 cls
-            }
+            };
+            unsafe { Id::new_null(msg_send![cls, alloc]) }.unwrap()
         };
         #[cfg(not(gnustep))]
-        let cls = Self::class();
+        let obj = unsafe { ffi::NSData::alloc() }.unwrap();
 
         let mut bytes = ManuallyDrop::new(bytes);
 
         unsafe {
-            let obj: *mut Self = msg_send![cls, alloc];
-            let obj: *mut Self = msg_send![
+            let obj = ffi::NSData::initWithBytesNoCopy_length_deallocator_(
                 obj,
-                initWithBytesNoCopy: bytes.as_mut_ptr() as *mut c_void,
-                length: bytes.len(),
-                deallocator: dealloc,
-            ];
-            Id::new(NonNull::new_unchecked(obj))
+                bytes.as_mut_ptr().cast(),
+                bytes.len(),
+                dealloc as *const _ as *mut c_void,
+            );
+            obj.cast().into_ownership()
         }
     }
 }
