@@ -10,12 +10,11 @@ use objc2::rc::{Id, Unknown};
 use objc2::runtime::{Bool, Object};
 use objc2::{class, msg_send, Encoding, Message, RefEncode};
 
-use crate::{Autoreleased, NSObject};
+use crate::{Autoreleased, NSArray, NSObject};
 
 pub type NSRange = [NSUInteger; 2];
 pub type NSComparisonResult = NSInteger;
 
-pub type NSArray = NSObject;
 pub type NSCoder = NSObject;
 pub type NSLocale = NSObject;
 pub type NSError = NSObject;

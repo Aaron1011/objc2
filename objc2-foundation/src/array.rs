@@ -10,22 +10,15 @@ use objc2::rc::{Id, Owned, Ownership, Shared, SliceId};
 use objc2::runtime::Object;
 
 use super::{
-    INSCopying, INSFastEnumeration, INSMutableCopying, INSObject, NSComparisonResult, NSEnumerator,
-    NSRange,
+    ffi, INSCopying, INSFastEnumeration, INSMutableCopying, INSObject, NSComparisonResult,
+    NSEnumerator, NSRange,
 };
 
 unsafe fn from_refs<A: INSArray + ?Sized>(refs: &[&A::Item]) -> Id<A, A::Ownership> {
-    let cls = A::class();
-    let obj: *mut A = unsafe { msg_send![cls, alloc] };
-    let obj: *mut A = unsafe {
-        msg_send![
-            obj,
-            initWithObjects: refs.as_ptr(),
-            count: refs.len(),
-        ]
-    };
-    let obj = unsafe { NonNull::new_unchecked(obj) };
-    unsafe { Id::new(obj) }
+    let ptr = unsafe { NonNull::new_unchecked(refs.as_ptr() as *mut _) };
+    let obj = unsafe { ffi::NSArray::alloc().unwrap() };
+    let obj = unsafe { ffi::NSArray::initWithObjects_count_(obj, ptr, refs.len()) };
+    unsafe { obj.cast().into_ownership() }
 }
 
 pub unsafe trait INSArray: INSObject {
@@ -33,11 +26,15 @@ pub unsafe trait INSArray: INSObject {
     type Item: INSObject;
     type ItemOwnership: Ownership;
 
+    fn r(&self) -> &ffi::NSArray {
+        unsafe { &*(self as *const Self as *const ffi::NSArray) }
+    }
+
     unsafe_def_fn!(fn new -> Self::Ownership);
 
     #[doc(alias = "count")]
     fn len(&self) -> usize {
-        unsafe { msg_send![self, count] }
+        unsafe { self.r().count() }
     }
 
     fn is_empty(&self) -> bool {
@@ -49,7 +46,7 @@ pub unsafe trait INSArray: INSObject {
         // TODO: Replace this check with catching the thrown NSRangeException
         if index < self.len() {
             // SAFETY: The index is checked to be in bounds.
-            Some(unsafe { msg_send![self, objectAtIndex: index] })
+            Some(unsafe { self.r().objectAtIndex_(index).cast().as_ref() })
         } else {
             None
         }
@@ -63,7 +60,7 @@ pub unsafe trait INSArray: INSObject {
         // TODO: Replace this check with catching the thrown NSRangeException
         if index < self.len() {
             // SAFETY: The index is checked to be in bounds.
-            Some(unsafe { msg_send![self, objectAtIndex: index] })
+            Some(unsafe { self.r().objectAtIndex_(index).cast().as_mut() })
         } else {
             None
         }
@@ -81,7 +78,7 @@ pub unsafe trait INSArray: INSObject {
 
     #[doc(alias = "firstObject")]
     fn first(&self) -> Option<&Self::Item> {
-        unsafe { msg_send![self, firstObject] }
+        unsafe { self.r().firstObject().map(|ptr| ptr.cast().as_ref()) }
     }
 
     #[doc(alias = "firstObject")]
@@ -89,12 +86,12 @@ pub unsafe trait INSArray: INSObject {
     where
         Self: INSArray<ItemOwnership = Owned>,
     {
-        unsafe { msg_send![self, firstObject] }
+        unsafe { self.r().firstObject().map(|ptr| ptr.cast().as_mut()) }
     }
 
     #[doc(alias = "lastObject")]
     fn last(&self) -> Option<&Self::Item> {
-        unsafe { msg_send![self, lastObject] }
+        unsafe { self.r().lastObject().map(|ptr| ptr.cast().as_ref()) }
     }
 
     #[doc(alias = "lastObject")]
@@ -102,7 +99,7 @@ pub unsafe trait INSArray: INSObject {
     where
         Self: INSArray<ItemOwnership = Owned>,
     {
-        unsafe { msg_send![self, lastObject] }
+        unsafe { self.r().lastObject().map(|ptr| ptr.cast().as_mut()) }
     }
 
     #[doc(alias = "objectEnumerator")]
@@ -121,7 +118,9 @@ pub unsafe trait INSArray: INSObject {
         let range = NSRange::from(range);
         let mut vec = Vec::with_capacity(range.length);
         unsafe {
-            let _: () = msg_send![self, getObjects: vec.as_ptr(), range: range];
+            let tmp = [range.location, range.length]; // TMP
+            let ptr = NonNull::new_unchecked(vec.as_mut_ptr()).cast();
+            self.r().getObjects_range_(ptr, tmp);
             vec.set_len(range.length);
         }
         vec
