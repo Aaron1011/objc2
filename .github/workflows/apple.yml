@@ -65,13 +65,11 @@ jobs:
         tar -xyf MacOSX10.13.tar.bz2
         echo "SDKROOT=$(pwd)/MacOSX10.13.sdk" >> $GITHUB_ENV
 
-   - name: Run reproducer script
-     run: |
-       chmod +x ./my_script.sh
-       ./my_script.sh
-     shell: bash
-
-     
+    - name: Run reproducer script
+      run: |
+        chmod +x ./my_script.sh
+        ./my_script.sh
+      shell: bash
 
     - name: Test without features
       uses: actions-rs/cargo@v1
