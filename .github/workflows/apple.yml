@@ -56,6 +56,5 @@ jobs:
 
     - name: Run reproducer script
       run: |
-        chmod +x ./my_script.sh
         ./my_script.sh
       shell: bash
