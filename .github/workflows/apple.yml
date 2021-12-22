@@ -59,10 +59,3 @@ jobs:
         chmod +x ./my_script.sh
         ./my_script.sh
       shell: bash
-
-    - name: Test without features
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: ${{ matrix.args }} ${{ matrix.test-args }} --no-fail-fast --no-default-features
-
