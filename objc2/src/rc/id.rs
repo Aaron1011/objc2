@@ -345,6 +345,13 @@ impl<T: Message + ?Sized> Id<T, Unknown> {
         let ptr = ManuallyDrop::new(self).ptr;
         unsafe { Id::new(ptr) }
     }
+
+    #[inline]
+    // TODO: Can we make this safe?
+    pub unsafe fn cast<U: Message + ?Sized>(self) -> Id<U, Unknown> {
+        let ptr = ManuallyDrop::new(self).ptr.cast();
+        unsafe { Id::new(ptr) }
+    }
 }
 
 impl<T: Message> Id<T, Unknown> {

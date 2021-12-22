@@ -87,17 +87,17 @@ pub unsafe trait INSString: INSObject {
 
     fn from_str(string: &str) -> Id<Self, Shared> {
         let bytes = string.as_ptr() as *const c_void;
-        unsafe {
-            let obj = ffi::NSString::alloc().unwrap();
+        let obj = unsafe { ffi::NSString::alloc().unwrap() };
+        let obj = unsafe {
             ffi::NSString::initWithBytes_length_encoding_(
                 obj,
                 bytes,
                 string.len(),
                 ffi::NSUTF8StringEncoding,
             )
-            .unwrap();
-            todo!("unsafe Id::cast")
-        }
+            .unwrap()
+        };
+        unsafe { obj.cast().into_shared() }
     }
 }
 

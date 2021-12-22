@@ -54,8 +54,7 @@ pub struct NSObjectNotSendNorSync;
 
 impl NSObject {
     pub fn new() -> Id<Self, Owned> {
-        unsafe { ffi::NSObject::new().unwrap() };
-        todo!("unsafe Id::cast")
+        unsafe { ffi::NSObject::new().unwrap().cast().into_owned() }
     }
 }
 
