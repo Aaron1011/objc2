@@ -2,7 +2,7 @@ name: Apple
 
 on:
   push:
-    branches: [master]
+    branches: [master, rust-ice]
   pull_request:
 
 env:
