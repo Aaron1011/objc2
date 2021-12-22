@@ -5,7 +5,7 @@ use core::mem::ManuallyDrop;
 use core::ptr::NonNull;
 use std::error::Error;
 
-use crate::rc::{Id, Ownership};
+use crate::rc::{Id, MaybeOwnership};
 use crate::runtime::{Class, Imp, Object, Sel};
 use crate::{Encode, EncodeArguments, RefEncode};
 
@@ -69,7 +69,7 @@ unsafe impl Message for Class {}
 
 // TODO: Make this fully private
 pub(crate) mod private {
-    use super::{Id, ManuallyDrop, Message, MessageReceiver, NonNull, Ownership};
+    use super::{Id, ManuallyDrop, MaybeOwnership, Message, MessageReceiver, NonNull};
 
     pub trait Sealed {}
 
@@ -79,7 +79,7 @@ pub(crate) mod private {
     impl<'a, T: Message + ?Sized> Sealed for &'a T {}
     impl<'a, T: Message + ?Sized> Sealed for &'a mut T {}
     impl<T: Message + ?Sized> Sealed for NonNull<T> {}
-    impl<T: Message + ?Sized, O: Ownership> Sealed for Id<T, O> {}
+    impl<T: Message + ?Sized, O: MaybeOwnership> Sealed for Id<T, O> {}
 
     impl<T: MessageReceiver + ?Sized> Sealed for ManuallyDrop<T> {}
 }
@@ -248,11 +248,10 @@ unsafe impl<T: Message + ?Sized> MessageReceiver for NonNull<T> {
     }
 }
 
-unsafe impl<T: Message + ?Sized, O: Ownership> MessageReceiver for Id<T, O> {
+unsafe impl<T: Message + ?Sized, O: MaybeOwnership> MessageReceiver for Id<T, O> {
     #[inline]
     fn as_raw_receiver(&self) -> *mut Object {
-        // TODO: Maybe don't dereference here, just to be safe?
-        (&**self).as_raw_receiver()
+        self.as_ptr() as *mut Object
     }
 }
 

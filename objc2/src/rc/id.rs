@@ -5,8 +5,8 @@ use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 use std::panic::{RefUnwindSafe, UnwindSafe};
 
-use super::AutoreleasePool;
-use super::{Owned, Ownership, Shared};
+use super::{AutoreleasePool, Unknown};
+use super::{MaybeOwnership, Owned, Ownership, Shared};
 use crate::ffi;
 use crate::Message;
 
@@ -100,7 +100,7 @@ use crate::Message;
 // TODO: Figure out if `Message` bound on `T` would be better here?
 // TODO: Add `ptr::Thin` bound on `T` to allow for only extern types
 // TODO: Consider changing the name of Id -> Retain
-pub struct Id<T: ?Sized, O: Ownership> {
+pub struct Id<T: ?Sized, O: MaybeOwnership> {
     /// A pointer to the contained object. The pointer is always retained.
     ///
     /// It is important that this is `NonNull`, since we want to dereference
@@ -119,7 +119,7 @@ pub struct Id<T: ?Sized, O: Ownership> {
     own: PhantomData<O>,
 }
 
-impl<T: Message + ?Sized, O: Ownership> Id<T, O> {
+impl<T: Message + ?Sized, O: MaybeOwnership> Id<T, O> {
     /// Constructs an [`Id`] to an object that already has +1 retain count.
     ///
     /// This is useful when you have a retain count that has been handed off
@@ -173,10 +173,15 @@ impl<T: Message + ?Sized, O: Ownership> Id<T, O> {
             own: PhantomData,
         }
     }
+
+    // TODO: Make this public
+    pub(crate) fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
 }
 
 // TODO: Add ?Sized bound
-impl<T: Message, O: Ownership> Id<T, O> {
+impl<T: Message, O: MaybeOwnership> Id<T, O> {
     /// Retains the given object pointer.
     ///
     /// This is useful when you have been given a pointer to an object from
@@ -315,6 +320,34 @@ impl<T: Message> Id<T, Shared> {
     }
 }
 
+impl<T: Message + ?Sized> Id<T, Unknown> {
+    #[inline]
+    pub unsafe fn into_owned(self) -> Id<T, Owned> {
+        unsafe { self.into_ownership() }
+    }
+
+    #[inline]
+    pub unsafe fn into_shared(self) -> Id<T, Shared> {
+        unsafe { self.into_ownership() }
+    }
+
+    #[inline]
+    pub unsafe fn into_ownership<O: Ownership>(self) -> Id<T, O> {
+        let ptr = ManuallyDrop::new(self).ptr;
+        unsafe { Id::new(ptr) }
+    }
+}
+
+impl<T: Message> Id<T, Unknown> {
+    #[doc(alias = "objc_autorelease")]
+    #[must_use = "If you don't intend to use the object any more, just drop it as usual"]
+    #[inline]
+    pub fn autorelease(self, pool: &AutoreleasePool) -> *mut T {
+        pool.__verify_is_inner();
+        self.autorelease_inner()
+    }
+}
+
 impl<T: Message + ?Sized> From<Id<T, Owned>> for Id<T, Shared> {
     /// Downgrade from an owned to a shared [`Id`], allowing it to be cloned.
     #[inline]
@@ -325,7 +358,15 @@ impl<T: Message + ?Sized> From<Id<T, Owned>> for Id<T, Shared> {
     }
 }
 
-// TODO: Add ?Sized bound
+impl<T: Message + ?Sized, O: Ownership> From<Id<T, O>> for Id<T, Unknown> {
+    #[inline]
+    fn from(obj: Id<T, O>) -> Self {
+        let ptr = ManuallyDrop::new(obj).ptr;
+        // SAFETY: The pointer is valid, and ownership is simply decreased
+        unsafe { <Id<T, Unknown>>::new(ptr) }
+    }
+}
+
 impl<T: Message> Clone for Id<T, Shared> {
     /// Makes a clone of the shared object.
     ///
@@ -346,7 +387,7 @@ impl<T: Message> Clone for Id<T, Shared> {
 /// borrowed data.
 ///
 /// [dropck_eyepatch]: https://doc.rust-lang.org/nightly/nomicon/dropck.html#an-escape-hatch
-impl<T: ?Sized, O: Ownership> Drop for Id<T, O> {
+impl<T: ?Sized, O: MaybeOwnership> Drop for Id<T, O> {
     /// Releases the retained object.
     ///
     /// The contained object's destructor (if it has one) is never run!
@@ -389,6 +430,9 @@ unsafe impl<T: Send + ?Sized> Send for Id<T, Owned> {}
 /// access as having a `T` directly.
 unsafe impl<T: Sync + ?Sized> Sync for Id<T, Owned> {}
 
+// TODO: Maybe implement Send and Sync for `O: Unknown`?
+
+// Explicitly using `Ownership` and not `MaybeOwnership` here!
 impl<T: ?Sized, O: Ownership> Deref for Id<T, O> {
     type Target = T;
 
@@ -412,7 +456,7 @@ impl<T: ?Sized> DerefMut for Id<T, Owned> {
     }
 }
 
-impl<T: ?Sized, O: Ownership> fmt::Pointer for Id<T, O> {
+impl<T: ?Sized, O: MaybeOwnership> fmt::Pointer for Id<T, O> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Pointer::fmt(&self.ptr.as_ptr(), f)
     }
@@ -422,8 +466,11 @@ impl<T: ?Sized, O: Ownership> fmt::Pointer for Id<T, O> {
 //
 // See https://doc.rust-lang.org/1.54.0/src/alloc/boxed.rs.html#1652-1675
 // and the `Arc` implementation.
+//
+// TODO: MaybeOwnership?
 impl<T: ?Sized, O: Ownership> Unpin for Id<T, O> {}
 
+// TODO: MaybeOwnership?
 impl<T: RefUnwindSafe + ?Sized, O: Ownership> RefUnwindSafe for Id<T, O> {}
 
 // Same as `Arc<T>`.

@@ -36,7 +36,7 @@ mod weak_id;
 pub use self::autorelease::{autoreleasepool, AutoreleasePool, AutoreleaseSafe};
 pub use self::id::Id;
 pub use self::id_traits::{DefaultId, SliceId, SliceIdMut};
-pub use self::ownership::{Owned, Ownership, Shared};
+pub use self::ownership::{MaybeOwnership, Owned, Ownership, Shared, Unknown};
 pub use self::weak_id::WeakId;
 
 #[cfg(test)]
