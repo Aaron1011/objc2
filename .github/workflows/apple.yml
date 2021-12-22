@@ -14,17 +14,6 @@ env:
   CARGO_TERM_VERBOSE: true
 
 jobs:
-  fmt:
-    name: Check formatting
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Check formatting
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: -- --check
-
   test:
     name: ${{ matrix.name }}
 
