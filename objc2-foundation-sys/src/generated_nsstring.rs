@@ -10,9 +10,8 @@ use objc2::rc::{Id, Unknown};
 use objc2::runtime::{Bool, Object};
 use objc2::{class, msg_send, Encoding, Message, RefEncode};
 
-use crate::NSObject;
+use crate::{Autoreleased, NSObject};
 
-pub type Autoreleased<T> = NonNull<T>;
 pub type NSRange = [NSUInteger; 2];
 pub type NSComparisonResult = NSInteger;
 

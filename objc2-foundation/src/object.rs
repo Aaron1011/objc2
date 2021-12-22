@@ -1,36 +1,37 @@
 use core::marker::PhantomData;
-use core::ptr::NonNull;
 
-use objc2::msg_send;
 use objc2::rc::{Id, Owned, Shared};
-use objc2::runtime::{Bool, Class, Object};
+use objc2::runtime::{Object, Class};
 use objc2::Message;
 
+use super::ffi;
 use super::NSString;
 
 pub unsafe trait INSObject: Message {
     fn class() -> &'static Class;
 
+    fn raw(&self) -> &ffi::NSObject {
+        unsafe { &*(self as *const Self as *const ffi::NSObject) }
+    }
+
     fn hash_code(&self) -> usize {
-        unsafe { msg_send![self, hash] }
+        unsafe { self.raw().hash() }
     }
 
     fn is_equal<T: INSObject>(&self, other: &T) -> bool {
-        let result: Bool = unsafe { msg_send![self, isEqual: other] };
-        result.is_true()
+        let other = &**other.raw();
+        unsafe { self.raw().isEqual_(other) }.is_true()
     }
 
     fn description(&self) -> Id<NSString, Shared> {
         unsafe {
-            let result: *mut NSString = msg_send![self, description];
             // TODO: Verify that description always returns a non-null string
-            Id::retain(NonNull::new_unchecked(result))
+            Id::retain(self.raw().description().unwrap().cast())
         }
     }
 
     fn is_kind_of(&self, cls: &Class) -> bool {
-        let result: Bool = unsafe { msg_send![self, isKindOfClass: cls] };
-        result.is_true()
+        unsafe { self.raw().isKindOfClass_(cls) }.is_true()
     }
 }
 
@@ -52,7 +53,10 @@ object!(unsafe pub struct NSObject<> {
 pub struct NSObjectNotSendNorSync;
 
 impl NSObject {
-    unsafe_def_fn!(pub fn new -> Owned);
+    pub fn new() -> Id<Self, Owned> {
+        unsafe { ffi::NSObject::new().unwrap() };
+        todo!("unsafe Id::cast")
+    }
 }
 
 #[cfg(test)]

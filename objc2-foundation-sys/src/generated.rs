@@ -1,13 +1,15 @@
 //! Example of what I would like `bindgen` to be able to generate.
 
 use core::mem::ManuallyDrop;
+use core::ptr::NonNull;
 
 use crate::NSString;
 use objc2::ffi::NSUInteger;
-use objc2::rc::{Autoreleased, Id, Unknown};
+use objc2::rc::{Id, Unknown};
 use objc2::runtime::{Bool, Class, Imp, Object, Protocol, Sel};
 use objc2::{class, msg_send, Encoding, Message, RefEncode};
 
+pub type Autoreleased<T> = NonNull<T>;
 pub type NSInvocation = NSObject;
 pub type NSMethodSignature = NSObject;
 
@@ -90,19 +92,19 @@ impl NSObject {
     pub unsafe fn doesNotRecognizeSelector_(&self, aSelector: Sel) {
         msg_send![self, doesNotRecognizeSelector: aSelector]
     }
-    pub unsafe fn forwardingTargetForSelector_<'a>(
+    pub unsafe fn forwardingTargetForSelector_(
         &self,
         aSelector: Sel,
-    ) -> Option<Autoreleased<'a, Object, Unknown>> {
+    ) -> Option<Autoreleased<Object>> {
         Autoreleased::new(msg_send![self, forwardingTargetForSelector: aSelector])
     }
     pub unsafe fn forwardInvocation_(&self, anInvocation: *const NSInvocation) {
         msg_send![self, forwardInvocation: anInvocation]
     }
-    pub unsafe fn methodSignatureForSelector_<'a>(
+    pub unsafe fn methodSignatureForSelector_(
         &self,
         aSelector: Sel,
-    ) -> Option<Autoreleased<'a, NSMethodSignature, Unknown>> {
+    ) -> Option<Autoreleased<NSMethodSignature>> {
         Autoreleased::new(msg_send![self, methodSignatureForSelector: aSelector])
     }
     pub unsafe fn allowsWeakReference(&self) -> Bool {
@@ -129,9 +131,9 @@ impl NSObject {
     pub unsafe fn instanceMethodForSelector_(aSelector: Sel) -> Option<Imp> {
         msg_send![class!(NSObject), instanceMethodForSelector: aSelector]
     }
-    pub unsafe fn instanceMethodSignatureForSelector_<'a>(
+    pub unsafe fn instanceMethodSignatureForSelector_(
         aSelector: Sel,
-    ) -> Option<Autoreleased<'a, NSMethodSignature, Unknown>> {
+    ) -> Option<Autoreleased<NSMethodSignature>> {
         Autoreleased::new(msg_send![
             class!(NSObject),
             instanceMethodSignatureForSelector: aSelector,
@@ -155,42 +157,39 @@ impl NSObject {
     pub unsafe fn class_class<'a>() -> Option<&'a Class> {
         msg_send![class!(NSObject), class]
     }
-    pub unsafe fn class_description<'a>() -> Option<Autoreleased<'a, NSString, Unknown>> {
+    pub unsafe fn class_description() -> Option<Autoreleased<NSString>> {
         Autoreleased::new(msg_send![class!(NSObject), description])
     }
-    pub unsafe fn class_debugDescription<'a>() -> Option<Autoreleased<'a, NSString, Unknown>> {
+    pub unsafe fn class_debugDescription() -> Option<Autoreleased<NSString>> {
         Autoreleased::new(msg_send![class!(NSObject), debugDescription])
     }
 
     pub unsafe fn isEqual_(&self, object: *const Object) -> Bool {
         msg_send![self, isEqual: object]
     }
-    pub unsafe fn self_<'a>(&self) -> Option<Autoreleased<'a, Self, Unknown>> {
+    pub unsafe fn self_(&self) -> Option<Autoreleased<Self>> {
         Autoreleased::new(msg_send![self, self])
     }
-    pub unsafe fn performSelector_<'a>(
-        &self,
-        aSelector: Sel,
-    ) -> Option<Autoreleased<'a, Object, Unknown>> {
+    pub unsafe fn performSelector_(&self, aSelector: Sel) -> Option<Autoreleased<Object>> {
         Autoreleased::new(msg_send![self, performSelector: aSelector])
     }
-    pub unsafe fn performSelector_withObject_<'a>(
+    pub unsafe fn performSelector_withObject_(
         &self,
         aSelector: Sel,
         object: *const Object,
-    ) -> Option<Autoreleased<'a, Object, Unknown>> {
+    ) -> Option<Autoreleased<Object>> {
         Autoreleased::new(msg_send![
             self,
             performSelector: aSelector,
             withObject: object
         ])
     }
-    pub unsafe fn performSelector_withObject_withObject_<'a>(
+    pub unsafe fn performSelector_withObject_withObject_(
         &self,
         aSelector: Sel,
         object1: *const Object,
         object2: *const Object,
-    ) -> Option<Autoreleased<'a, Object, Unknown>> {
+    ) -> Option<Autoreleased<Object>> {
         Autoreleased::new(msg_send![
             self,
             performSelector: aSelector,
@@ -219,7 +218,7 @@ impl NSObject {
     pub unsafe fn release(&self) {
         msg_send![self, release]
     }
-    pub unsafe fn autorelease<'a>(&self) -> Option<Autoreleased<'a, Self, Unknown>> {
+    pub unsafe fn autorelease(&self) -> Option<Autoreleased<Self>> {
         Autoreleased::new(msg_send![self, autorelease])
     }
     pub unsafe fn retainCount(&self) -> NSUInteger {
@@ -237,10 +236,10 @@ impl NSObject {
     pub unsafe fn superclass<'a>(&self) -> Option<&'a Class> {
         msg_send![self, superclass]
     }
-    pub unsafe fn description<'a>(&self) -> Option<Autoreleased<'a, NSString, Unknown>> {
+    pub unsafe fn description(&self) -> Option<Autoreleased<NSString>> {
         Autoreleased::new(msg_send![self, description])
     }
-    pub unsafe fn debugDescription<'a>(&self) -> Option<Autoreleased<'a, NSString, Unknown>> {
+    pub unsafe fn debugDescription(&self) -> Option<Autoreleased<NSString>> {
         Autoreleased::new(msg_send![self, debugDescription])
     }
 }

@@ -25,6 +25,8 @@ pub use self::range::NSRange;
 pub use self::string::{INSString, NSString};
 pub use self::value::{INSValue, NSValue};
 
+pub use objc2_foundation_sys as ffi;
+
 #[cfg(apple)]
 #[link(name = "Foundation", kind = "framework")]
 extern "C" {}

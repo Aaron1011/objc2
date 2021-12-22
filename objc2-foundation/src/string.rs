@@ -6,25 +6,25 @@ use core::str;
 use std::os::raw::c_char;
 
 use alloc::borrow::ToOwned;
-use objc2::ffi;
-use objc2::msg_send;
 use objc2::rc::{autoreleasepool, AutoreleasePool};
 use objc2::rc::{Id, Shared};
 
-use super::{INSCopying, INSObject};
-
-#[cfg(apple)]
-const UTF8_ENCODING: usize = 4;
-#[cfg(gnustep)]
-const UTF8_ENCODING: i32 = 4;
+use super::{ffi, INSCopying, INSObject};
 
 #[allow(unused)]
 #[allow(non_upper_case_globals)]
-const NSNotFound: ffi::NSInteger = ffi::NSIntegerMax;
+const NSNotFound: objc2::ffi::NSInteger = objc2::ffi::NSIntegerMax;
 
 pub unsafe trait INSString: INSObject {
+    fn r(&self) -> &ffi::NSString {
+        unsafe { &*(self as *const Self as *const ffi::NSString) }
+    }
+
     fn len(&self) -> usize {
-        unsafe { msg_send![self, lengthOfBytesUsingEncoding: UTF8_ENCODING] }
+        unsafe {
+            self.r()
+                .lengthOfBytesUsingEncoding_(ffi::NSUTF8StringEncoding)
+        }
     }
 
     fn is_empty(&self) -> bool {
@@ -67,7 +67,7 @@ pub unsafe trait INSString: INSObject {
         //
         // So the lifetime of the returned pointer is either the same as the
         // NSString OR the lifetime of the innermost @autoreleasepool.
-        let bytes: *const c_char = unsafe { msg_send![self, UTF8String] };
+        let bytes: *const c_char = unsafe { self.r().UTF8String() };
         let bytes = bytes as *const u8;
         let len = self.len();
 
@@ -86,17 +86,17 @@ pub unsafe trait INSString: INSObject {
     }
 
     fn from_str(string: &str) -> Id<Self, Shared> {
-        let cls = Self::class();
         let bytes = string.as_ptr() as *const c_void;
         unsafe {
-            let obj: *mut Self = msg_send![cls, alloc];
-            let obj: *mut Self = msg_send![
+            let obj = ffi::NSString::alloc().unwrap();
+            ffi::NSString::initWithBytes_length_encoding_(
                 obj,
-                initWithBytes: bytes,
-                length: string.len(),
-                encoding: UTF8_ENCODING,
-            ];
-            Id::new(NonNull::new_unchecked(obj))
+                bytes,
+                string.len(),
+                ffi::NSUTF8StringEncoding,
+            )
+            .unwrap();
+            todo!("unsafe Id::cast")
         }
     }
 }

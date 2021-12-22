@@ -27,6 +27,7 @@ block = ["block2"]
 block2 = { path = "../block2", version = "=0.2.0-alpha.2", optional = true }
 objc2 = { path = "../objc2", version = "=0.3.0-alpha.5" }
 objc-sys = { path = "../objc-sys", version = "=0.2.0-alpha.0" }
+objc2-foundation-sys = { path = "../objc2-foundation-sys" }
 
 [package.metadata.docs.rs]
 default-target = "x86_64-apple-darwin"
