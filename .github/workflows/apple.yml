@@ -31,29 +31,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: Test macOS 10.15
-            os: macos-10.15
-            rust:
-              target: x86_64-apple-darwin
-          - name: Test macOS 11
-            os: macos-11
-            rust:
-              target: x86_64-apple-darwin
           - name: Test macOS nightly
             os: macos-latest
             rust:
               toolchain: nightly
               target: x86_64-apple-darwin
-          - name: Build macOS 32bit
-            os: macos-10.15
-            rust:
-              toolchain: nightly
-              target: i686-apple-darwin
-              components: rust-src
-            args: -Zbuild-std -Zdoctest-xcompile
-            # 32-bit support was removed in 10.15, so we can't test the
-            # binary, only build it
-            test-args: --no-run
 
           # - { target: x86_64-apple-ios,         os: macos-latest, }
           # - { target: aarch64-apple-ios,        os: macos-latest, }
@@ -65,14 +47,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-
-    - name: Cache Rust
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/
-          target/
-        key: ${{ matrix.name }}-cargo-${{ hashFiles('**/Cargo.toml') }}
 
     - name: Install Rust toolchain
       # Assume default toolchain is already installed
@@ -91,11 +65,13 @@ jobs:
         tar -xyf MacOSX10.13.tar.bz2
         echo "SDKROOT=$(pwd)/MacOSX10.13.sdk" >> $GITHUB_ENV
 
-    - name: Check documentation
-      uses: actions-rs/cargo@v1
-      with:
-        command: doc
-        args: ${{ matrix.args }} --no-deps --document-private-items
+   - name: Run reproducer script
+     run: |
+       chmod +x ./my_script.sh
+       ./my_script.sh
+     shell: bash
+
+     
 
     - name: Test without features
       uses: actions-rs/cargo@v1
@@ -103,9 +79,3 @@ jobs:
         command: test
         args: ${{ matrix.args }} ${{ matrix.test-args }} --no-fail-fast --no-default-features
 
-    - name: Test with features
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        # Not using --all-features because some features are nightly-only
-        args: ${{ matrix.args }} ${{ matrix.test-args }} --no-fail-fast --features malloc,block,exception,catch_all,verify_message
